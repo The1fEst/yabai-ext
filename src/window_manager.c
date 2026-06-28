@@ -251,16 +251,28 @@ void window_manager_center_mouse(struct window_manager *wm, struct window *windo
         }
     }
 
+    CGRect frame = window->frame;
+    uint32_t did = window_display_id(window->id);
+    struct view *view = window_manager_find_managed_window(wm, window);
+
+    if (view) {
+        struct window_node *node = view_find_window_node(view, window->id);
+        if (node) {
+            struct area area = node->zoom ? node->zoom->area : node->area;
+            frame = CGRectMake(area.x, area.y, area.w, area.h);
+            did = space_display_id(view->sid);
+        }
+    }
+
     CGPoint cursor;
     SLSGetCurrentCursorLocation(g_connection, &cursor);
-    if (CGRectContainsPoint(window->frame, cursor)) return;
+    if (CGRectContainsPoint(frame, cursor)) return;
 
-    uint32_t did = window_display_id(window->id);
     if (!did) return;
 
     CGPoint center = {
-        window->frame.origin.x + window->frame.size.width / 2,
-        window->frame.origin.y + window->frame.size.height / 2
+        frame.origin.x + frame.size.width / 2,
+        frame.origin.y + frame.size.height / 2
     };
 
     CGRect bounds = CGDisplayBounds(did);
@@ -2083,10 +2095,11 @@ bool window_manager_close_window(struct window *window)
     AXUIElementCopyAttributeValue(window->ref, kAXCloseButtonAttribute, &button);
     if (!button) return false;
 
-    AXUIElementPerformAction(button, kAXPressAction);
+    AXError result = AXUIElementPerformAction(button, kAXPressAction);
     CFRelease(button);
 
-    return true;
+    if (result == kAXErrorSuccess) window->is_closing = true;
+    return result == kAXErrorSuccess;
 }
 
 void window_manager_send_window_to_space(struct space_manager *sm, struct window_manager *wm, struct window *window, uint64_t dst_sid, bool moved_by_rule)

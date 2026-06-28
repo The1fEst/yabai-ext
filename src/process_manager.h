@@ -24,6 +24,10 @@ struct process_manager
     pid_t front_pid;
     pid_t last_front_pid;
     EventTime switch_event_time;
+    pid_t pending_window_origin_pid;
+    EventTime pending_window_origin_time;
+    uint64_t pending_window_origin_space_id;
+    uint32_t pending_window_insertion_point;
     ProcessSerialNumber finder_psn;
 };
 

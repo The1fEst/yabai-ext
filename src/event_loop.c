@@ -356,6 +356,20 @@ static EVENT_HANDLER(APPLICATION_FRONT_SWITCHED)
         return;
     }
 
+    struct window *origin_window = window_manager_find_window(&g_window_manager, g_window_manager.focused_window_id);
+    if (origin_window && origin_window->is_closing) {
+        origin_window = window_manager_find_window(&g_window_manager, g_window_manager.last_window_id);
+    }
+
+    g_process_manager.pending_window_origin_pid = process->pid;
+    g_process_manager.pending_window_origin_time = GetCurrentEventTime();
+    g_process_manager.pending_window_origin_space_id = display_space_id(g_display_manager.current_display_id);
+    g_process_manager.pending_window_insertion_point = 0;
+
+    if (origin_window && window_display_id(origin_window->id) == g_display_manager.current_display_id) {
+        g_process_manager.pending_window_insertion_point = origin_window->id;
+    }
+
     if (g_space_manager.skip_window_focus_animation) {
         uint64_t psn_sid = process_manager_active_space_for_psn(application->connection);
 
@@ -578,16 +592,34 @@ static EVENT_HANDLER(WINDOW_CREATED)
 
     if (window_manager_should_manage_window(window) && !window_manager_find_managed_window(&g_window_manager, window)) {
         uint64_t sid;
+        uint32_t insertion_point = 0;
+        EventTime origin_dt = GetCurrentEventTime() - g_process_manager.pending_window_origin_time;
+        bool has_pending_origin = g_process_manager.pending_window_origin_pid == window_pid && origin_dt < 2.0f;
+
+        if (has_pending_origin && g_space_manager.window_insertion_point == INSERT_FOCUSED) {
+            insertion_point = g_process_manager.pending_window_insertion_point;
+        } else if (g_space_manager.window_insertion_point == INSERT_FOCUSED) {
+            struct window *focused_window = window_manager_find_window(&g_window_manager, g_window_manager.focused_window_id);
+            if (focused_window && focused_window->is_closing) {
+                insertion_point = g_window_manager.last_window_id;
+            }
+        }
 
         if (g_window_manager.window_origin_mode == WINDOW_ORIGIN_DEFAULT) {
             sid = window_space(window->id);
         } else if (g_window_manager.window_origin_mode == WINDOW_ORIGIN_FOCUSED) {
-            sid = g_space_manager.current_space_id;
+            if (has_pending_origin) {
+                sid = g_process_manager.pending_window_origin_space_id;
+            } else {
+                sid = g_space_manager.current_space_id;
+            }
         } else /* if (g_window_manager.window_origin_mode == WINDOW_ORIGIN_CURSOR) */ {
             sid = space_manager_cursor_space();
         }
 
-        struct view *view = space_manager_tile_window_on_space(&g_space_manager, window, sid);
+        if (has_pending_origin) g_process_manager.pending_window_origin_pid = 0;
+
+        struct view *view = space_manager_tile_window_on_space_with_insertion_point(&g_space_manager, window, sid, insertion_point);
         window_manager_add_managed_window(&g_window_manager, window, view);
     }
 
