@@ -174,14 +174,18 @@ static EVENT_HANDLER(APPLICATION_LAUNCHED)
 
     int window_count;
     struct window **window_list = window_manager_add_application_windows(&g_space_manager, &g_window_manager, application, &window_count);
-    uint32_t prev_window_id = g_window_manager.focused_window_id;
+    bool has_pending_origin = g_process_manager.pending_window_origin_pid == process->pid;
+    uint32_t prev_window_id = has_pending_origin && g_space_manager.window_insertion_point == INSERT_FOCUSED
+                            ? g_process_manager.pending_window_insertion_point
+                            : g_window_manager.focused_window_id;
 
     uint64_t sid;
     bool default_origin = g_window_manager.window_origin_mode == WINDOW_ORIGIN_DEFAULT;
 
     if (!default_origin) {
         if (g_window_manager.window_origin_mode == WINDOW_ORIGIN_FOCUSED) {
-            sid = g_space_manager.current_space_id;
+            sid = has_pending_origin ? g_process_manager.pending_window_origin_space_id
+                                     : g_space_manager.current_space_id;
         } else /* if (g_window_manager.window_origin_mode == WINDOW_ORIGIN_CURSOR) */ {
             sid = space_manager_cursor_space();
         }
@@ -195,6 +199,11 @@ static EVENT_HANDLER(APPLICATION_LAUNCHED)
 
         if (window_manager_should_manage_window(window) && !window_manager_find_managed_window(&g_window_manager, window)) {
             if (default_origin) sid = window_space(window->id);
+
+            uint64_t actual_sid = window_space(window->id);
+            if (actual_sid != sid) {
+                space_manager_move_window_to_space(sid, window);
+            }
 
             struct view *view = space_manager_find_view(&g_space_manager, sid);
             if (view->layout != VIEW_FLOAT) {
@@ -241,6 +250,8 @@ static EVENT_HANDLER(APPLICATION_LAUNCHED)
         window_node_flush(view->root);
         view_clear_flag(view, VIEW_IS_DIRTY);
     }
+
+    if (has_pending_origin) g_process_manager.pending_window_origin_pid = 0;
 
     if (workspace_is_macos_sequoia() || workspace_is_macos_tahoe()) {
         update_window_notifications();
@@ -349,25 +360,35 @@ out:
 static EVENT_HANDLER(APPLICATION_FRONT_SWITCHED)
 {
     struct process *process = context;
+    EventTime now = GetCurrentEventTime();
+    EventTime pending_age = now - g_process_manager.pending_window_origin_time;
+    if (g_process_manager.pending_window_origin_pid != process->pid || pending_age >= 2.0f) {
+        struct window *origin_window = window_manager_find_window(&g_window_manager, g_window_manager.focused_window_id);
+        if (origin_window && origin_window->is_closing) {
+            origin_window = window_manager_find_window(&g_window_manager, g_window_manager.last_window_id);
+        }
+
+        bool origin_window_is_valid = origin_window && origin_window->application->pid == g_process_manager.front_pid;
+        uint32_t origin_display_id = origin_window_is_valid ? window_display_id(origin_window->id) : 0;
+        uint32_t origin_source_display_id = origin_window_is_valid ? origin_display_id : g_display_manager.current_display_id;
+
+        g_process_manager.pending_window_origin_pid = process->pid;
+        g_process_manager.pending_window_origin_time = now;
+        g_process_manager.pending_window_origin_space_id = display_space_id(origin_source_display_id);
+        g_process_manager.pending_window_insertion_point = 0;
+
+        if (origin_window_is_valid) {
+            g_process_manager.pending_window_origin_space_id = window_space(origin_window->id);
+            g_process_manager.pending_window_insertion_point = origin_window->id;
+        }
+
+    }
+
     struct application *application = window_manager_find_application(&g_window_manager, process->pid);
 
     if (!application) {
         window_manager_add_lost_front_switched_event(&g_window_manager, process->pid);
         return;
-    }
-
-    struct window *origin_window = window_manager_find_window(&g_window_manager, g_window_manager.focused_window_id);
-    if (origin_window && origin_window->is_closing) {
-        origin_window = window_manager_find_window(&g_window_manager, g_window_manager.last_window_id);
-    }
-
-    g_process_manager.pending_window_origin_pid = process->pid;
-    g_process_manager.pending_window_origin_time = GetCurrentEventTime();
-    g_process_manager.pending_window_origin_space_id = display_space_id(g_display_manager.current_display_id);
-    g_process_manager.pending_window_insertion_point = 0;
-
-    if (origin_window && window_display_id(origin_window->id) == g_display_manager.current_display_id) {
-        g_process_manager.pending_window_insertion_point = origin_window->id;
     }
 
     if (g_space_manager.skip_window_focus_animation) {
@@ -619,8 +640,17 @@ static EVENT_HANDLER(WINDOW_CREATED)
 
         if (has_pending_origin) g_process_manager.pending_window_origin_pid = 0;
 
+        uint64_t actual_sid = window_space(window->id);
+        if (actual_sid != sid) {
+            space_manager_move_window_to_space(sid, window);
+        }
+
         struct view *view = space_manager_tile_window_on_space_with_insertion_point(&g_space_manager, window, sid, insertion_point);
         window_manager_add_managed_window(&g_window_manager, window, view);
+
+        if (has_pending_origin && g_process_manager.front_pid == window_pid) {
+            window_manager_focus_window_with_raise(&window->application->psn, window->id, window->ref);
+        }
     }
 
     if (window_manager_is_window_eligible(window)) {
@@ -646,6 +676,17 @@ static EVENT_HANDLER(WINDOW_DESTROYED)
     if (view) {
         space_manager_untile_window(view, window);
         window_manager_remove_managed_window(&g_window_manager, window->id);
+    }
+
+    struct window *close_focus_window = window_manager_find_window(&g_window_manager, window->close_focus_window_id);
+    if (close_focus_window && !close_focus_window->is_closing &&
+        window_space(close_focus_window->id) == window->close_focus_space_id &&
+        space_is_visible(window_space(close_focus_window->id))) {
+        window_manager_focus_window_with_raise(&close_focus_window->application->psn,
+                                               close_focus_window->id,
+                                               close_focus_window->ref);
+    } else if (window->close_focus_space_id) {
+        space_manager_focus_space(window->close_focus_space_id);
     }
 
     if (g_mouse_state.window == window) g_mouse_state.window = NULL;

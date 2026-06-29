@@ -24,6 +24,7 @@ struct space_manager
     enum window_node_child window_placement;
     enum window_insertion_point window_insertion_point;
     bool window_zoom_persist;
+    bool space_focus_per_display;
     uint32_t auto_balance;
     struct space_label *labels;
     bool skip_window_focus_animation;

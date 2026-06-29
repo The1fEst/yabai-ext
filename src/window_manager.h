@@ -88,6 +88,9 @@ struct window_manager
     ProcessSerialNumber focused_window_psn;
     uint32_t last_window_id;
     bool enable_mff;
+    bool cycle_focus;
+    bool cycle_move;
+    bool window_space_per_display;
     enum ffm_mode ffm_mode;
     enum purify_mode purify_mode;
     enum window_origin_mode window_origin_mode;
@@ -127,6 +130,7 @@ struct window *window_manager_find_window_at_point_filtering_window(struct windo
 struct window *window_manager_find_window_at_point(struct window_manager *wm, CGPoint point);
 struct window *window_manager_find_window_below_cursor(struct window_manager *wm);
 struct window *window_manager_find_closest_managed_window_in_direction(struct window_manager *wm, struct window *window, int direction);
+struct window *window_manager_find_closest_window_on_display(struct window_manager *wm, struct window *window, uint32_t did);
 struct window *window_manager_find_prev_managed_window(struct space_manager *sm, struct window_manager *wm, struct window *window);
 struct window *window_manager_find_next_managed_window(struct space_manager *sm, struct window_manager *wm, struct window *window);
 struct window *window_manager_find_first_managed_window(struct space_manager *sm, struct window_manager *wm);

@@ -28,6 +28,7 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             "\t\"follow_space\":%s,\n"
             "\t\"opacity\":%.4f,\n"
             "\t\"manage\":%s,\n"
+            "\t\"main-only\":%s,\n"
             "\t\"sticky\":%s,\n"
             "\t\"mouse_follows_focus\":%s,\n"
             "\t\"sub-layer\":\"%s\",\n"
@@ -48,6 +49,7 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             json_bool(rule_effects_check_flag(&rule->effects, RULE_FOLLOW_SPACE)),
             rule->effects.opacity,
             json_optional_bool(rule->effects.manage),
+            json_optional_bool(rule->effects.main_only),
             json_optional_bool(rule->effects.sticky),
             json_optional_bool(rule->effects.mff),
             rule_effects_check_flag(&rule->effects, RULE_LAYER) ? layer_str[rule->effects.layer] : "",
@@ -96,6 +98,7 @@ void rule_combine_effects(struct rule_effects *effects, struct rule_effects *res
     }
 
     if (effects->manage     != RULE_PROP_UD) result->manage     = effects->manage;
+    if (effects->main_only  != RULE_PROP_UD) result->main_only  = effects->main_only;
     if (effects->sticky     != RULE_PROP_UD) result->sticky     = effects->sticky;
     if (effects->mff        != RULE_PROP_UD) result->mff        = effects->mff;
     if (effects->fullscreen != RULE_PROP_UD) result->fullscreen = effects->fullscreen;

@@ -294,6 +294,39 @@ uint32_t display_manager_find_closest_display_in_direction(uint32_t source_did, 
     return best_did;
 }
 
+uint32_t display_manager_find_cycled_display_in_direction(uint32_t source_did, int direction)
+{
+    uint32_t did = display_manager_find_closest_display_in_direction(source_did, direction);
+    if (did) return did;
+
+    int display_count;
+    uint32_t *display_list = display_manager_active_display_list(&display_count);
+    if (!display_list || display_count < 2) return 0;
+
+    CGPoint source = display_center(source_did);
+    uint32_t best_did = 0;
+    double best_primary = direction == DIR_EAST || direction == DIR_SOUTH ? DBL_MAX : -DBL_MAX;
+    double best_secondary = DBL_MAX;
+
+    for (int i = 0; i < display_count; ++i) {
+        uint32_t candidate = display_list[i];
+        if (candidate == source_did) continue;
+
+        CGPoint center = display_center(candidate);
+        double primary = direction == DIR_EAST || direction == DIR_WEST ? center.x : center.y;
+        double secondary = direction == DIR_EAST || direction == DIR_WEST ? fabs(center.y - source.y) : fabs(center.x - source.x);
+        bool better_primary = direction == DIR_EAST || direction == DIR_SOUTH ? primary < best_primary : primary > best_primary;
+
+        if (better_primary || (primary == best_primary && secondary < best_secondary)) {
+            best_did = candidate;
+            best_primary = primary;
+            best_secondary = secondary;
+        }
+    }
+
+    return best_did;
+}
+
 bool display_manager_menu_bar_hidden(void)
 {
     int status = 0;

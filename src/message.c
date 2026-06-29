@@ -22,6 +22,10 @@ extern bool g_verbose;
 /* --------------------------------DOMAIN CONFIG-------------------------------- */
 #define COMMAND_CONFIG_DEBUG_OUTPUT          "debug_output"
 #define COMMAND_CONFIG_MFF                   "mouse_follows_focus"
+#define COMMAND_CONFIG_CYCLE_FOCUS           "cycle_focus"
+#define COMMAND_CONFIG_CYCLE_MOVE            "cycle_move"
+#define COMMAND_CONFIG_SPACE_FOCUS_DISPLAY   "space_focus_per_display"
+#define COMMAND_CONFIG_WINDOW_SPACE_DISPLAY  "window_space_per_display"
 #define COMMAND_CONFIG_FFM                   "focus_follows_mouse"
 #define COMMAND_CONFIG_DISPLAY_ORDER         "display_arrangement_order"
 #define COMMAND_CONFIG_WINDOW_ORIGIN         "window_origin_display"
@@ -204,6 +208,7 @@ extern bool g_verbose;
 #define ARGUMENT_RULE_KEY_SPACE      "space"
 #define ARGUMENT_RULE_KEY_OPACITY    "opacity"
 #define ARGUMENT_RULE_KEY_MANAGE     "manage"
+#define ARGUMENT_RULE_KEY_MAIN_ONLY  "main_only"
 #define ARGUMENT_RULE_KEY_STICKY     "sticky"
 #define ARGUMENT_RULE_KEY_MFF        "mouse_follows_focus"
 #define ARGUMENT_RULE_KEY_SUB_LAYER  "sub-layer"
@@ -662,6 +667,15 @@ struct selector
     };
 };
 
+static int token_to_direction(struct token token)
+{
+    if (token_equals(token, ARGUMENT_COMMON_SEL_NORTH)) return DIR_NORTH;
+    if (token_equals(token, ARGUMENT_COMMON_SEL_EAST))  return DIR_EAST;
+    if (token_equals(token, ARGUMENT_COMMON_SEL_SOUTH)) return DIR_SOUTH;
+    if (token_equals(token, ARGUMENT_COMMON_SEL_WEST))  return DIR_WEST;
+    return 0;
+}
+
 static struct selector parse_display_selector(FILE *rsp, char **message, uint32_t acting_did, bool optional)
 {
     TIME_FUNCTION;
@@ -863,6 +877,47 @@ static struct selector parse_space_selector(FILE *rsp, char **message, uint64_t 
     } else {
         result.did_parse = false;
         daemon_fail(rsp, "value '%.*s' is not a valid option for SPACE_SEL\n", result.token.length, result.token.text);
+    }
+
+    return result;
+}
+
+static struct selector parse_space_per_display_selector(FILE *rsp, char **message, uint64_t acting_sid, bool enabled)
+{
+    if (!enabled) {
+        return parse_space_selector(rsp, message, acting_sid, false);
+    }
+
+    char *saved_message = *message;
+    struct selector result = { .token = get_token(message), .did_parse = true };
+    struct token_value value = token_to_value(result.token);
+    int space_count;
+    uint64_t *space_list = display_space_list(space_display_id(acting_sid), &space_count);
+
+    if (!space_list || space_count == 0) {
+        result.did_parse = false;
+        return result;
+    }
+
+    int current_index = 0;
+    for (int i = 0; i < space_count; ++i) {
+        if (space_list[i] == acting_sid) {
+            current_index = i;
+            break;
+        }
+    }
+
+    if (value.type == TOKEN_TYPE_INT) {
+        int index = (value.int_value - 1) % space_count;
+        if (index < 0) index += space_count;
+        result.sid = space_list[index];
+    } else if (token_equals(result.token, ARGUMENT_COMMON_SEL_NEXT)) {
+        result.sid = space_list[(current_index + 1) % space_count];
+    } else if (token_equals(result.token, ARGUMENT_COMMON_SEL_PREV)) {
+        result.sid = space_list[(current_index - 1 + space_count) % space_count];
+    } else {
+        *message = saved_message;
+        return parse_space_selector(rsp, message, acting_sid, false);
     }
 
     return result;
@@ -1186,6 +1241,50 @@ static void handle_domain_config(FILE *rsp, struct token domain, char *message)
                 g_window_manager.enable_mff = false;
             } else if (token_equals(value, ARGUMENT_COMMON_VAL_ON)) {
                 g_window_manager.enable_mff = true;
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        } else if (token_equals(command, COMMAND_CONFIG_CYCLE_FOCUS)) {
+            struct token value = get_token(&message);
+            if (!token_is_valid(value)) {
+                fprintf(rsp, "%s\n", bool_str[g_window_manager.cycle_focus]);
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                g_window_manager.cycle_focus = false;
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                g_window_manager.cycle_focus = true;
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        } else if (token_equals(command, COMMAND_CONFIG_CYCLE_MOVE)) {
+            struct token value = get_token(&message);
+            if (!token_is_valid(value)) {
+                fprintf(rsp, "%s\n", bool_str[g_window_manager.cycle_move]);
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                g_window_manager.cycle_move = false;
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                g_window_manager.cycle_move = true;
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        } else if (token_equals(command, COMMAND_CONFIG_SPACE_FOCUS_DISPLAY)) {
+            struct token value = get_token(&message);
+            if (!token_is_valid(value)) {
+                fprintf(rsp, "%s\n", bool_str[g_space_manager.space_focus_per_display]);
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                g_space_manager.space_focus_per_display = false;
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                g_space_manager.space_focus_per_display = true;
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        } else if (token_equals(command, COMMAND_CONFIG_WINDOW_SPACE_DISPLAY)) {
+            struct token value = get_token(&message);
+            if (!token_is_valid(value)) {
+                fprintf(rsp, "%s\n", bool_str[g_window_manager.window_space_per_display]);
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                g_window_manager.window_space_per_display = false;
+            } else if (token_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                g_window_manager.window_space_per_display = true;
             } else {
                 daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
             }
@@ -1778,7 +1877,7 @@ static void handle_domain_space(FILE *rsp, struct token domain, char *message)
 
     for (; token_is_valid(command); command = get_token(&message)) {
         if (token_equals(command, COMMAND_SPACE_FOCUS)) {
-            struct selector selector = parse_space_selector(rsp, &message, acting_sid, false);
+            struct selector selector = parse_space_per_display_selector(rsp, &message, acting_sid, g_space_manager.space_focus_per_display);
             if (selector.did_parse && selector.sid) {
                 enum space_op_error result = space_manager_focus_space(selector.sid);
                 if (result == SPACE_OP_ERROR_SAME_SPACE) {
@@ -2071,11 +2170,25 @@ static void handle_domain_window(FILE *rsp, struct token domain, char *message)
         }
 
         if (token_equals(command, COMMAND_WINDOW_FOCUS)) {
-            struct selector selector = parse_window_selector(rsp, &message, acting_window, true);
+            struct selector selector = parse_window_selector(g_window_manager.cycle_focus ? NULL : rsp, &message, acting_window, true);
 
             if (token_is_valid(selector.token)) {
                 if (selector.did_parse && selector.window) {
                     acting_window = selector.window;
+                } else if (g_window_manager.cycle_focus && acting_window && token_to_direction(selector.token)) {
+                    int direction = token_to_direction(selector.token);
+                    uint32_t source_did = window_display_id(acting_window->id);
+                    uint32_t target_did = display_manager_find_cycled_display_in_direction(source_did, direction);
+                    struct window *target_window = target_did ? window_manager_find_closest_window_on_display(&g_window_manager, acting_window, target_did) : NULL;
+
+                    if (target_window) {
+                        window_manager_focus_window_with_raise(&target_window->application->psn, target_window->id, target_window->ref);
+                        acting_window = target_window;
+                    } else if (target_did) {
+                        display_manager_focus_display(target_did, display_space_id(target_did));
+                        acting_window = NULL;
+                    }
+                    continue;
                 } else {
                     return;
                 }
@@ -2148,7 +2261,8 @@ static void handle_domain_window(FILE *rsp, struct token domain, char *message)
                 }
             }
         } else if (token_equals(command, COMMAND_WINDOW_SPACE)) {
-            struct selector selector = parse_space_selector(rsp, &message, space_manager_active_space(), false);
+            uint64_t acting_sid = window_space(acting_window->id);
+            struct selector selector = parse_space_per_display_selector(rsp, &message, acting_sid, g_window_manager.window_space_per_display);
             if (selector.did_parse && selector.sid) {
                 if (space_is_fullscreen(selector.sid)) {
                     daemon_fail(rsp, "can not move window to a macOS fullscreen space!\n");
@@ -2175,7 +2289,7 @@ static void handle_domain_window(FILE *rsp, struct token domain, char *message)
                 }
             }
         } else if (token_equals(command, COMMAND_WINDOW_WARP)) {
-            struct selector selector = parse_window_selector(rsp, &message, acting_window, false);
+            struct selector selector = parse_window_selector(g_window_manager.cycle_move ? NULL : rsp, &message, acting_window, false);
             if (selector.did_parse && selector.window) {
                 enum window_op_error result = window_manager_warp_window(&g_space_manager, &g_window_manager, acting_window, selector.window);
                 if (result == WINDOW_OP_ERROR_INVALID_SRC_VIEW) {
@@ -2190,6 +2304,14 @@ static void handle_domain_window(FILE *rsp, struct token domain, char *message)
                     daemon_fail(rsp, "cannot warp a window with a window in the same stack.\n");
                 } else if (result == WINDOW_OP_ERROR_SAME_WINDOW) {
                     daemon_fail(rsp, "cannot warp a window onto itself.\n");
+                }
+            } else if (g_window_manager.cycle_move && token_to_direction(selector.token)) {
+                int direction = token_to_direction(selector.token);
+                uint32_t source_did = window_display_id(acting_window->id);
+                uint32_t target_did = display_manager_find_cycled_display_in_direction(source_did, direction);
+                if (target_did) {
+                    window_manager_send_window_to_space(&g_space_manager, &g_window_manager, acting_window, display_space_id(target_did), false);
+                    window_manager_focus_window_with_raise(&acting_window->application->psn, acting_window->id, acting_window->ref);
                 }
             }
         } else if (token_equals(command, COMMAND_WINDOW_STACK)) {
@@ -2728,6 +2850,17 @@ static bool parse_rule(FILE *rsp, char **message, struct rule *rule, struct toke
                 rule->effects.manage = RULE_PROP_ON;
             } else if (string_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
                 rule->effects.manage = RULE_PROP_OFF;
+            } else {
+                daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
+                did_parse = false;
+            }
+        } else if (string_equals(key, ARGUMENT_RULE_KEY_MAIN_ONLY)) {
+            if (exclusion) unsupported_exclusion = key;
+
+            if (string_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                rule->effects.main_only = RULE_PROP_ON;
+            } else if (string_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                rule->effects.main_only = RULE_PROP_OFF;
             } else {
                 daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
                 did_parse = false;

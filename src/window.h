@@ -98,6 +98,9 @@ struct window
     bool is_root;
     bool is_eligible;
     bool is_closing;
+    uint32_t close_focus_window_id;
+    uint64_t close_focus_space_id;
+    uint64_t main_only_space_id;
     uint8_t notification;
     uint8_t rule_flags;
     uint8_t flags;

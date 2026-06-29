@@ -32,6 +32,7 @@ struct rule_effects
     uint64_t sid;
     float opacity;
     int manage;
+    int main_only;
     int sticky;
     int mff;
     int layer;
