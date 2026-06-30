@@ -2146,48 +2146,6 @@ bool window_manager_close_window(struct window *window)
 {
     TIME_FUNCTION;
 
-    if (g_window_manager.focused_window_id == window->id) {
-        struct view *view = window_manager_find_managed_window(&g_window_manager, window);
-        struct window_node *node = view ? view_find_window_node(view, window->id) : NULL;
-        uint64_t source_sid = window_space(window->id);
-        window->close_focus_space_id = source_sid;
-
-        if (node && node->window_count > 1) {
-            window->close_focus_window_id = node->window_order[1];
-        } else {
-            CGRect source_frame = window->frame;
-            if (node) source_frame = CGRectMake(node->area.x, node->area.y, node->area.w, node->area.h);
-
-            CGPoint source_center = CGPointMake(CGRectGetMidX(source_frame), CGRectGetMidY(source_frame));
-            struct window *closest_same_space = NULL;
-            double same_space_distance = DBL_MAX;
-
-            table_for (struct window *candidate, g_window_manager.window, {
-                if (candidate == window || candidate->is_closing || !candidate->is_eligible) continue;
-                if (window_check_flag(candidate, WINDOW_MINIMIZE) || candidate->application->is_hidden) continue;
-
-                uint64_t candidate_sid = window_space(candidate->id);
-                if (candidate_sid != source_sid) continue;
-
-                CGRect candidate_frame = candidate->frame;
-                struct view *candidate_view = window_manager_find_managed_window(&g_window_manager, candidate);
-                struct window_node *candidate_node = candidate_view ? view_find_window_node(candidate_view, candidate->id) : NULL;
-                if (candidate_node) candidate_frame = CGRectMake(candidate_node->area.x, candidate_node->area.y, candidate_node->area.w, candidate_node->area.h);
-
-                double dx = CGRectGetMidX(candidate_frame) - source_center.x;
-                double dy = CGRectGetMidY(candidate_frame) - source_center.y;
-                double distance = dx*dx + dy*dy;
-
-                if (distance < same_space_distance) {
-                    closest_same_space = candidate;
-                    same_space_distance = distance;
-                }
-            })
-
-            if (closest_same_space) window->close_focus_window_id = closest_same_space->id;
-        }
-    }
-
     CFTypeRef button = NULL;
     AXUIElementCopyAttributeValue(window->ref, kAXCloseButtonAttribute, &button);
     if (!button) return false;
@@ -2195,19 +2153,7 @@ bool window_manager_close_window(struct window *window)
     AXError result = AXUIElementPerformAction(button, kAXPressAction);
     CFRelease(button);
 
-    if (result == kAXErrorSuccess) {
-        window->is_closing = true;
-
-        struct window *close_focus_window = window_manager_find_window(&g_window_manager, window->close_focus_window_id);
-        if (close_focus_window && !close_focus_window->is_closing &&
-            window_space(close_focus_window->id) == window->close_focus_space_id) {
-            window_manager_focus_window_with_raise(&close_focus_window->application->psn,
-                                                   close_focus_window->id,
-                                                   close_focus_window->ref);
-        } else if (window->close_focus_space_id) {
-            space_manager_focus_space(window->close_focus_space_id);
-        }
-    }
+    if (result == kAXErrorSuccess) window->is_closing = true;
     return result == kAXErrorSuccess;
 }
 
