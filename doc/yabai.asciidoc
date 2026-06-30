@@ -663,14 +663,14 @@ ARGUMENT
     Window should be managed (tile vs float). +
     Most windows will be managed automatically, so this should mainly be used to make a window float.
 
-*manage_position='<POSITION>'*::
+*manage_off_position='<POSITION>'*::
     Position floating windows created by *manage=off*. +
-    Accepts the same values as *main_only_position* and defaults to 'none'.
+    Accepts the same values as *main_only_float_position* and defaults to 'none'.
 
 *main_only='<BOOL_SEL>'*::
     Keep one tiled main window per application on each space and make additional matching windows float.
 
-*main_only_position='<POSITION>'*::
+*main_only_float_position='<POSITION>'*::
     Position additional floating windows created by *main_only=on*. +
     Valid values are 'none', 'center', 'top_left', 'top_center', 'top_right', 'center_left', 'center_right', 'bottom_left', 'bottom_center', 'bottom_right', and 'fullscreen'. +
     The default value 'none' preserves the position chosen by macOS. 'fullscreen' fills the usable display area without entering native fullscreen.
@@ -724,9 +724,9 @@ DATAFORMAT
     "follow_space": bool,
     "opacity": number,
     "manage": bool (optional),
-    "manage-position": string,
+    "manage-off-position": string,
     "main-only": bool (optional),
-    "main-only-position": string,
+    "main-only-float-position": string,
     "sticky": bool (optional),
     "mouse_follows_focus": bool (optional),
     "sub-layer": string,

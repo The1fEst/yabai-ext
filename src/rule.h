@@ -5,20 +5,20 @@
 #define RULE_PROP_ON  1
 #define RULE_PROP_OFF 2
 
-enum main_only_position
+enum rule_position
 {
-    MAIN_ONLY_POSITION_UNSPECIFIED,
-    MAIN_ONLY_POSITION_NONE,
-    MAIN_ONLY_POSITION_CENTER,
-    MAIN_ONLY_POSITION_TOP_LEFT,
-    MAIN_ONLY_POSITION_TOP_CENTER,
-    MAIN_ONLY_POSITION_TOP_RIGHT,
-    MAIN_ONLY_POSITION_CENTER_LEFT,
-    MAIN_ONLY_POSITION_CENTER_RIGHT,
-    MAIN_ONLY_POSITION_BOTTOM_LEFT,
-    MAIN_ONLY_POSITION_BOTTOM_CENTER,
-    MAIN_ONLY_POSITION_BOTTOM_RIGHT,
-    MAIN_ONLY_POSITION_FULLSCREEN
+    RULE_POSITION_UNSPECIFIED,
+    RULE_POSITION_NONE,
+    RULE_POSITION_CENTER,
+    RULE_POSITION_TOP_LEFT,
+    RULE_POSITION_TOP_CENTER,
+    RULE_POSITION_TOP_RIGHT,
+    RULE_POSITION_CENTER_LEFT,
+    RULE_POSITION_CENTER_RIGHT,
+    RULE_POSITION_BOTTOM_LEFT,
+    RULE_POSITION_BOTTOM_CENTER,
+    RULE_POSITION_BOTTOM_RIGHT,
+    RULE_POSITION_FULLSCREEN
 };
 
 enum rule_flag
@@ -48,9 +48,9 @@ struct rule_effects
     uint64_t sid;
     float opacity;
     int manage;
-    enum main_only_position manage_position;
+    enum rule_position manage_off_position;
     int main_only;
-    enum main_only_position main_only_position;
+    enum rule_position main_only_float_position;
     int sticky;
     int mff;
     int layer;
@@ -84,8 +84,8 @@ static inline void rule_effects_clear_flag(struct rule_effects *e, enum rule_eff
 static inline void rule_effects_set_flag(struct rule_effects *e, enum rule_effects_flag x) { e->flags |= x; }
 
 void rule_serialize(FILE *rsp, struct rule *rule, int index);
-const char *rule_main_only_position_str(enum main_only_position position);
-enum main_only_position rule_main_only_position_from_string(const char *value);
+const char *rule_position_str(enum rule_position position);
+enum rule_position rule_position_from_string(const char *value);
 void rule_combine_effects(struct rule_effects *rule_effects, struct rule_effects *result);
 void rule_reapply_all(void);
 bool rule_reapply_by_index(int index);

@@ -1,33 +1,33 @@
 extern struct space_manager g_space_manager;
 extern struct window_manager g_window_manager;
 
-const char *rule_main_only_position_str(enum main_only_position position)
+const char *rule_position_str(enum rule_position position)
 {
     switch (position) {
-    case MAIN_ONLY_POSITION_NONE:          return "none";
-    case MAIN_ONLY_POSITION_CENTER:        return "center";
-    case MAIN_ONLY_POSITION_TOP_LEFT:      return "top_left";
-    case MAIN_ONLY_POSITION_TOP_CENTER:    return "top_center";
-    case MAIN_ONLY_POSITION_TOP_RIGHT:     return "top_right";
-    case MAIN_ONLY_POSITION_CENTER_LEFT:   return "center_left";
-    case MAIN_ONLY_POSITION_CENTER_RIGHT:  return "center_right";
-    case MAIN_ONLY_POSITION_BOTTOM_LEFT:   return "bottom_left";
-    case MAIN_ONLY_POSITION_BOTTOM_CENTER: return "bottom_center";
-    case MAIN_ONLY_POSITION_BOTTOM_RIGHT:  return "bottom_right";
-    case MAIN_ONLY_POSITION_FULLSCREEN:    return "fullscreen";
+    case RULE_POSITION_NONE:          return "none";
+    case RULE_POSITION_CENTER:        return "center";
+    case RULE_POSITION_TOP_LEFT:      return "top_left";
+    case RULE_POSITION_TOP_CENTER:    return "top_center";
+    case RULE_POSITION_TOP_RIGHT:     return "top_right";
+    case RULE_POSITION_CENTER_LEFT:   return "center_left";
+    case RULE_POSITION_CENTER_RIGHT:  return "center_right";
+    case RULE_POSITION_BOTTOM_LEFT:   return "bottom_left";
+    case RULE_POSITION_BOTTOM_CENTER: return "bottom_center";
+    case RULE_POSITION_BOTTOM_RIGHT:  return "bottom_right";
+    case RULE_POSITION_FULLSCREEN:    return "fullscreen";
     default:                               return "";
     }
 }
 
-enum main_only_position rule_main_only_position_from_string(const char *value)
+enum rule_position rule_position_from_string(const char *value)
 {
-    for (enum main_only_position position = MAIN_ONLY_POSITION_NONE;
-         position <= MAIN_ONLY_POSITION_FULLSCREEN;
+    for (enum rule_position position = RULE_POSITION_NONE;
+         position <= RULE_POSITION_FULLSCREEN;
          ++position) {
-        if (string_equals(value, rule_main_only_position_str(position))) return position;
+        if (string_equals(value, rule_position_str(position))) return position;
     }
 
-    return MAIN_ONLY_POSITION_UNSPECIFIED;
+    return RULE_POSITION_UNSPECIFIED;
 }
 
 void rule_serialize(FILE *rsp, struct rule *rule, int index)
@@ -57,9 +57,9 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             "\t\"follow_space\":%s,\n"
             "\t\"opacity\":%.4f,\n"
             "\t\"manage\":%s,\n"
-            "\t\"manage-position\":\"%s\",\n"
+            "\t\"manage-off-position\":\"%s\",\n"
             "\t\"main-only\":%s,\n"
-            "\t\"main-only-position\":\"%s\",\n"
+            "\t\"main-only-float-position\":\"%s\",\n"
             "\t\"sticky\":%s,\n"
             "\t\"mouse_follows_focus\":%s,\n"
             "\t\"sub-layer\":\"%s\",\n"
@@ -80,9 +80,9 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             json_bool(rule_effects_check_flag(&rule->effects, RULE_FOLLOW_SPACE)),
             rule->effects.opacity,
             json_optional_bool(rule->effects.manage),
-            rule_main_only_position_str(rule->effects.manage_position),
+            rule_position_str(rule->effects.manage_off_position),
             json_optional_bool(rule->effects.main_only),
-            rule_main_only_position_str(rule->effects.main_only_position),
+            rule_position_str(rule->effects.main_only_float_position),
             json_optional_bool(rule->effects.sticky),
             json_optional_bool(rule->effects.mff),
             rule_effects_check_flag(&rule->effects, RULE_LAYER) ? layer_str[rule->effects.layer] : "",
@@ -131,9 +131,9 @@ void rule_combine_effects(struct rule_effects *effects, struct rule_effects *res
     }
 
     if (effects->manage     != RULE_PROP_UD) result->manage     = effects->manage;
-    if (effects->manage_position != MAIN_ONLY_POSITION_UNSPECIFIED) result->manage_position = effects->manage_position;
+    if (effects->manage_off_position != RULE_POSITION_UNSPECIFIED) result->manage_off_position = effects->manage_off_position;
     if (effects->main_only  != RULE_PROP_UD) result->main_only  = effects->main_only;
-    if (effects->main_only_position != MAIN_ONLY_POSITION_UNSPECIFIED) result->main_only_position = effects->main_only_position;
+    if (effects->main_only_float_position != RULE_POSITION_UNSPECIFIED) result->main_only_float_position = effects->main_only_float_position;
     if (effects->sticky     != RULE_PROP_UD) result->sticky     = effects->sticky;
     if (effects->mff        != RULE_PROP_UD) result->mff        = effects->mff;
     if (effects->fullscreen != RULE_PROP_UD) result->fullscreen = effects->fullscreen;

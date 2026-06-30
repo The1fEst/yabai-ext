@@ -952,11 +952,11 @@ Window should be managed (tile vs float).
 Most windows will be managed automatically, so this should mainly be used to make a window float.
 .RE
 .sp
-\fBmanage_position=\fI<POSITION>\fP\fP
+\fBmanage_off_position=\fI<POSITION>\fP\fP
 .RS 4
 Position floating windows created by \fBmanage=off\fP.
 .br
-Accepts the same values as \fBmain_only_position\fP and defaults to \fInoneP.
+Accepts the same values as \fBmain_only_float_position\fP and defaults to \fInone\fP.
 .RE
 .sp
 \fBmain_only=\fI<BOOL_SEL>\fP\fP
@@ -964,13 +964,13 @@ Accepts the same values as \fBmain_only_position\fP and defaults to \fInoneP.
 Keep one tiled main window per application on each space and make additional matching windows float.
 .RE
 .sp
-\fBmain_only_position=\fI<POSITION>\fP\fP
+\fBmain_only_float_position=\fI<POSITION>\fP\fP
 .RS 4
 Position additional floating windows created by \fBmain_only=on\fP.
 .br
-Valid values are \fInoneP, \fIcenterP, \fItop_leftP, \fItop_centerP, \fItop_rightP, \fIcenter_leftP, \fIcenter_rightP, \fIbottom_leftP, \fIbottom_centerP, \fIbottom_rightP, and \fIfullscreenP.
+Valid values are \fInone\fP, \fIcenter\fP, \fItop_left\fP, \fItop_center\fP, \fItop_right\fP, \fIcenter_left\fP, \fIcenter_right\fP, \fIbottom_left\fP, \fIbottom_center\fP, \fIbottom_right\fP, and \fIfullscreen\fP.
 .br
-The default value \fInoneP preserves the position chosen by macOS. \fIfullscreenP fills the usable display area without entering native fullscreen.
+The default value \fInone\fP preserves the position chosen by macOS. \fIfullscreen\fP fills the usable display area without entering native fullscreen.
 .RE
 .sp
 \fBsticky=\fI<BOOL_SEL>\fP\fP
@@ -1046,9 +1046,9 @@ System Integrity Protection must be partially disabled.
     "follow_space": bool,
     "opacity": number,
     "manage": bool (optional),
-    "manage-position": string,
+    "manage-off-position": string,
     "main-only": bool (optional),
-    "main-only-position": string,
+    "main-only-float-position": string,
     "sticky": bool (optional),
     "mouse_follows_focus": bool (optional),
     "sub\-layer": string,

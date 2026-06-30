@@ -99,7 +99,7 @@ struct window
     bool is_eligible;
     bool is_closing;
     uint64_t main_only_space_id;
-    enum main_only_position rule_position;
+    enum rule_position rule_position;
     uint8_t notification;
     uint8_t rule_flags;
     uint8_t flags;

@@ -36,7 +36,7 @@ Additional features of yabai include focus-follows-mouse, disabling animations f
 This fork adds a few multi-display and window-placement improvements on top of yabai:
 
 - New windows open next to the window that was focused before the application switch, on the same display and space. Automatic splits follow the focused window's geometry, and `mouse_follows_focus` uses the final tiled frame.
-- Rules support `main_only=on`, allowing one tiled main window per application on each space while keeping additional windows, dialogs, and progress windows floating. `main_only_position` positions those additional windows, while `manage_position` provides the same placement options for `manage=off` rules.
+- Rules support `main_only=on`, allowing one tiled main window per application on each space while keeping additional windows, dialogs, and progress windows floating. `main_only_float_position` positions those additional windows, while `manage_off_position` provides the same placement options for `manage=off` rules.
 - `cycle_focus=on` and `cycle_move=on` extend directional focus and movement across displays, wrapping at the outer edge.
 - `space_focus_per_display=on` makes space focus selectors local to the active display, while `window_space_per_display=on` does the same for moving windows between spaces.
 
