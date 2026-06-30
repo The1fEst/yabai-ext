@@ -48,6 +48,7 @@ struct rule_effects
     uint64_t sid;
     float opacity;
     int manage;
+    enum main_only_position manage_position;
     int main_only;
     enum main_only_position main_only_position;
     int sticky;

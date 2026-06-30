@@ -5,7 +5,7 @@ extern void *g_workspace_context;
 extern struct process_manager g_process_manager;
 extern struct window_manager g_window_manager;
 
-static void window_manager_position_main_only_window(struct window *window, enum main_only_position position);
+static void window_manager_position_rule_window(struct window *window, enum main_only_position position);
 extern struct mouse_state g_mouse_state;
 extern double g_cv_host_clock_frequency;
 
@@ -131,7 +131,7 @@ void window_manager_apply_manage_rule_effects_to_window(struct space_manager *sm
 
         if (is_main_window) {
             window->main_only_space_id = target_sid;
-            window->main_only_position = MAIN_ONLY_POSITION_NONE;
+            window->rule_position = MAIN_ONLY_POSITION_NONE;
             window_set_rule_flag(window, WINDOW_RULE_MANAGED);
             window_clear_flag(window, WINDOW_FLOAT);
             if (window->is_eligible) {
@@ -139,14 +139,16 @@ void window_manager_apply_manage_rule_effects_to_window(struct space_manager *sm
             }
         } else {
             window->main_only_space_id = 0;
-            window->main_only_position = effects->main_only_position;
+            window->rule_position = effects->main_only_position;
             window_clear_rule_flag(window, WINDOW_RULE_MANAGED);
             window_manager_make_window_floating(sm, wm, window, true, true);
         }
     } else if (effects->manage == RULE_PROP_ON) {
+        window->rule_position = MAIN_ONLY_POSITION_NONE;
         window_set_rule_flag(window, WINDOW_RULE_MANAGED);
         window_manager_make_window_floating(sm, wm, window, false, true);
     } else if (effects->manage == RULE_PROP_OFF) {
+        window->rule_position = effects->manage_position;
         window_clear_rule_flag(window, WINDOW_RULE_MANAGED);
         window_manager_make_window_floating(sm, wm, window, true, true);
     }
@@ -203,7 +205,7 @@ void window_manager_apply_rule_effects_to_window(struct space_manager *sm, struc
         window_manager_apply_grid(sm, wm, window, effects->grid[0], effects->grid[1], effects->grid[2], effects->grid[3], effects->grid[4], effects->grid[5]);
     }
 
-    window_manager_position_main_only_window(window, window->main_only_position);
+    window_manager_position_rule_window(window, window->rule_position);
 }
 
 void window_manager_apply_manage_rules_to_window(struct space_manager *sm, struct window_manager *wm, struct window *window, char *window_title, char *window_role, char *window_subrole, bool one_shot_rules)
@@ -319,7 +321,7 @@ void window_manager_center_mouse(struct window_manager *wm, struct window *windo
     CGWarpMouseCursorPosition(center);
 }
 
-static void window_manager_position_main_only_window(struct window *window, enum main_only_position position)
+static void window_manager_position_rule_window(struct window *window, enum main_only_position position)
 {
     if (position <= MAIN_ONLY_POSITION_NONE) return;
 

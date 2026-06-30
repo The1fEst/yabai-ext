@@ -663,6 +663,10 @@ ARGUMENT
     Window should be managed (tile vs float). +
     Most windows will be managed automatically, so this should mainly be used to make a window float.
 
+*manage_position='<POSITION>'*::
+    Position floating windows created by *manage=off*. +
+    Accepts the same values as *main_only_position* and defaults to 'none'.
+
 *main_only='<BOOL_SEL>'*::
     Keep one tiled main window per application on each space and make additional matching windows float.
 
@@ -720,6 +724,7 @@ DATAFORMAT
     "follow_space": bool,
     "opacity": number,
     "manage": bool (optional),
+    "manage-position": string,
     "main-only": bool (optional),
     "main-only-position": string,
     "sticky": bool (optional),

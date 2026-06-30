@@ -952,6 +952,13 @@ Window should be managed (tile vs float).
 Most windows will be managed automatically, so this should mainly be used to make a window float.
 .RE
 .sp
+\fBmanage_position=\fI<POSITION>\fP\fP
+.RS 4
+Position floating windows created by \fBmanage=off\fP.
+.br
+Accepts the same values as \fBmain_only_position\fP and defaults to \fInoneP.
+.RE
+.sp
 \fBmain_only=\fI<BOOL_SEL>\fP\fP
 .RS 4
 Keep one tiled main window per application on each space and make additional matching windows float.
@@ -1039,6 +1046,7 @@ System Integrity Protection must be partially disabled.
     "follow_space": bool,
     "opacity": number,
     "manage": bool (optional),
+    "manage-position": string,
     "main-only": bool (optional),
     "main-only-position": string,
     "sticky": bool (optional),
