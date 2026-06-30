@@ -33,6 +33,16 @@ yabai allows you to control your windows, spaces and displays freely using an in
 The primary function of yabai is tiling window management; automatically modifying your window layout using a binary space partitioning algorithm to allow you to focus on the content of your windows without distractions.
 Additional features of yabai include focus-follows-mouse, disabling animations for switching spaces, creating spaces past the limit of 16 spaces, and much more.
 
+This fork adds a few multi-display and window-lifecycle improvements on top of yabai:
+
+- New windows open next to the window that was focused before the application switch, on the same display and space. Automatic splits follow the focused window's geometry, and `mouse_follows_focus` uses the final tiled frame.
+- Closing a window keeps focus on the closest window on the same space. If that space becomes empty, the space itself remains focused instead of jumping elsewhere.
+- Rules support `main_only=on`, allowing one tiled main window per application on each space while keeping additional windows, dialogs, and progress windows floating.
+- `cycle_focus=on` and `cycle_move=on` extend directional focus and movement across displays, wrapping at the outer edge.
+- `space_focus_per_display=on` makes space focus selectors local to the active display, while `window_space_per_display=on` does the same for moving windows between spaces.
+
+All new configuration options default to `off` and preserve upstream behavior unless explicitly enabled.
+
 ## Installation and Configuration
 
 - The [&nearr;&nbsp;yabai&nbsp;wiki][yabai-wiki] has both brief and detailed installation instructions for multiple installation methods, and also explains how to uninstall yabai completely.
