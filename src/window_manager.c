@@ -5,7 +5,7 @@ extern void *g_workspace_context;
 extern struct process_manager g_process_manager;
 extern struct window_manager g_window_manager;
 
-static void window_manager_position_rule_window(struct window *window, enum rule_position position);
+static void window_manager_position_rule_window(struct space_manager *sm, struct window *window, enum rule_position position);
 extern struct mouse_state g_mouse_state;
 extern double g_cv_host_clock_frequency;
 
@@ -205,7 +205,7 @@ void window_manager_apply_rule_effects_to_window(struct space_manager *sm, struc
         window_manager_apply_grid(sm, wm, window, effects->grid[0], effects->grid[1], effects->grid[2], effects->grid[3], effects->grid[4], effects->grid[5]);
     }
 
-    window_manager_position_rule_window(window, window->rule_position);
+    window_manager_position_rule_window(sm, window, window->rule_position);
 }
 
 void window_manager_apply_manage_rules_to_window(struct space_manager *sm, struct window_manager *wm, struct window *window, char *window_title, char *window_role, char *window_subrole, bool one_shot_rules)
@@ -321,7 +321,7 @@ void window_manager_center_mouse(struct window_manager *wm, struct window *windo
     CGWarpMouseCursorPosition(center);
 }
 
-static void window_manager_position_rule_window(struct window *window, enum rule_position position)
+static void window_manager_position_rule_window(struct space_manager *sm, struct window *window, enum rule_position position)
 {
     if (position <= RULE_POSITION_NONE) return;
 
@@ -332,6 +332,15 @@ static void window_manager_position_rule_window(struct window *window, enum rule
     CGRect frame = window_ax_frame(window);
 
     if (position == RULE_POSITION_FULLSCREEN) {
+        uint64_t sid = window_space(window->id);
+        struct view *view = space_manager_find_view(sm, sid ? sid : display_space_id(did));
+        if (view && view_check_flag(view, VIEW_ENABLE_PADDING)) {
+            bounds.origin.x += view->left_padding;
+            bounds.origin.y += view->top_padding;
+            bounds.size.width -= view->left_padding + view->right_padding;
+            bounds.size.height -= view->top_padding + view->bottom_padding;
+        }
+
         window_manager_set_window_frame(window, bounds.origin.x, bounds.origin.y,
                                         bounds.size.width, bounds.size.height);
         return;

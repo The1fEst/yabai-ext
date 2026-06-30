@@ -673,7 +673,7 @@ ARGUMENT
 *main_only_float_position='<POSITION>'*::
     Position additional floating windows created by *main_only=on*. +
     Valid values are 'none', 'center', 'top_left', 'top_center', 'top_right', 'center_left', 'center_right', 'bottom_left', 'bottom_center', 'bottom_right', and 'fullscreen'. +
-    The default value 'none' preserves the position chosen by macOS. 'fullscreen' fills the usable display area without entering native fullscreen.
+    The default value 'none' preserves the position chosen by macOS. 'fullscreen' fills the usable display area while honoring yabai space padding, without entering native fullscreen.
 
 *sticky='<BOOL_SEL>'*::
     Window appears on all spaces. +
