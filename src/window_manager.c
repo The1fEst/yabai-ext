@@ -2204,30 +2204,26 @@ bool window_manager_close_window(struct window *window)
 {
     TIME_FUNCTION;
 
-    if (g_window_manager.focused_window_id == window->id) {
-        uint64_t sid = window_space(window->id);
-        struct window *next = window_manager_find_window_on_space_by_rank_filtering_window(&g_window_manager, sid, 1, window->id);
-        if (next) {
-            window->close_focus_window_id = next->id;
-            window->close_focus_space_id = sid;
-        }
-    }
-
     CFTypeRef button = NULL;
     AXUIElementCopyAttributeValue(window->ref, kAXCloseButtonAttribute, &button);
     if (!button) return false;
 
+    if (g_window_manager.focused_window_id == window->id) {
+        uint64_t sid = window_space(window->id);
+        struct window *next = window_manager_find_window_on_space_by_rank_filtering_window(&g_window_manager, sid, 1, window->id);
+        if (next) {
+            window_manager_focus_window_with_raise(&next->application->psn, next->id, next->ref);
+        } else {
+            uint32_t did = window_display_id(window->id);
+            if (did) display_manager_set_active_display_id(did);
+            _SLPSSetFrontProcessWithOptions(&g_process_manager.finder_psn, 0, kCPSNoWindows);
+        }
+    }
+
     AXError result = AXUIElementPerformAction(button, kAXPressAction);
     CFRelease(button);
 
-    if (result == kAXErrorSuccess) {
-        window->is_closing = true;
-
-        struct window *next = window_manager_find_window(&g_window_manager, window->close_focus_window_id);
-        if (next && !next->is_closing && window_space(next->id) == window->close_focus_space_id) {
-            window_manager_focus_window_with_raise(&next->application->psn, next->id, next->ref);
-        }
-    }
+    if (result == kAXErrorSuccess) window->is_closing = true;
     return result == kAXErrorSuccess;
 }
 

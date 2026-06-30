@@ -688,15 +688,6 @@ static EVENT_HANDLER(WINDOW_DESTROYED)
     window_manager_remove_scratchpad_for_window(&g_window_manager, window, false);
     window_manager_remove_window(&g_window_manager, window->id);
 
-    struct window *close_focus_window = window_manager_find_window(&g_window_manager, window->close_focus_window_id);
-    if (close_focus_window && !close_focus_window->is_closing &&
-        window_space(close_focus_window->id) == window->close_focus_space_id &&
-        space_is_visible(window->close_focus_space_id)) {
-        window_manager_focus_window_with_raise(&close_focus_window->application->psn,
-                                               close_focus_window->id,
-                                               close_focus_window->ref);
-    }
-
     window_unobserve(window);
     window_destroy(window);
 
