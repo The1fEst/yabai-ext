@@ -209,6 +209,7 @@ extern bool g_verbose;
 #define ARGUMENT_RULE_KEY_OPACITY    "opacity"
 #define ARGUMENT_RULE_KEY_MANAGE     "manage"
 #define ARGUMENT_RULE_KEY_MAIN_ONLY  "main_only"
+#define ARGUMENT_RULE_KEY_MAIN_ONLY_POSITION "main_only_position"
 #define ARGUMENT_RULE_KEY_STICKY     "sticky"
 #define ARGUMENT_RULE_KEY_MFF        "mouse_follows_focus"
 #define ARGUMENT_RULE_KEY_SUB_LAYER  "sub-layer"
@@ -2862,6 +2863,14 @@ static bool parse_rule(FILE *rsp, char **message, struct rule *rule, struct toke
             } else if (string_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
                 rule->effects.main_only = RULE_PROP_OFF;
             } else {
+                daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
+                did_parse = false;
+            }
+        } else if (string_equals(key, ARGUMENT_RULE_KEY_MAIN_ONLY_POSITION)) {
+            if (exclusion) unsupported_exclusion = key;
+
+            rule->effects.main_only_position = rule_main_only_position_from_string(value);
+            if (rule->effects.main_only_position == MAIN_ONLY_POSITION_UNSPECIFIED) {
                 daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
                 did_parse = false;
             }

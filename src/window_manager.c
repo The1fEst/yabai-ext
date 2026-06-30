@@ -4,6 +4,8 @@ extern struct event_loop g_event_loop;
 extern void *g_workspace_context;
 extern struct process_manager g_process_manager;
 extern struct window_manager g_window_manager;
+
+static void window_manager_position_main_only_window(struct window *window, enum main_only_position position);
 extern struct mouse_state g_mouse_state;
 extern double g_cv_host_clock_frequency;
 
@@ -129,6 +131,7 @@ void window_manager_apply_manage_rule_effects_to_window(struct space_manager *sm
 
         if (is_main_window) {
             window->main_only_space_id = target_sid;
+            window->main_only_position = MAIN_ONLY_POSITION_NONE;
             window_set_rule_flag(window, WINDOW_RULE_MANAGED);
             window_clear_flag(window, WINDOW_FLOAT);
             if (window->is_eligible) {
@@ -136,6 +139,7 @@ void window_manager_apply_manage_rule_effects_to_window(struct space_manager *sm
             }
         } else {
             window->main_only_space_id = 0;
+            window->main_only_position = effects->main_only_position;
             window_clear_rule_flag(window, WINDOW_RULE_MANAGED);
             window_manager_make_window_floating(sm, wm, window, true, true);
         }
@@ -198,6 +202,8 @@ void window_manager_apply_rule_effects_to_window(struct space_manager *sm, struc
     if (effects->grid[0] != 0 && effects->grid[1] != 0) {
         window_manager_apply_grid(sm, wm, window, effects->grid[0], effects->grid[1], effects->grid[2], effects->grid[3], effects->grid[4], effects->grid[5]);
     }
+
+    window_manager_position_main_only_window(window, window->main_only_position);
 }
 
 void window_manager_apply_manage_rules_to_window(struct space_manager *sm, struct window_manager *wm, struct window *window, char *window_title, char *window_role, char *window_subrole, bool one_shot_rules)
@@ -311,6 +317,47 @@ void window_manager_center_mouse(struct window_manager *wm, struct window *windo
     if (!CGRectContainsPoint(bounds, center)) return;
 
     CGWarpMouseCursorPosition(center);
+}
+
+static void window_manager_position_main_only_window(struct window *window, enum main_only_position position)
+{
+    if (position <= MAIN_ONLY_POSITION_NONE) return;
+
+    uint32_t did = window_display_id(window->id);
+    if (!did) return;
+
+    CGRect bounds = display_bounds_constrained(did, false);
+    CGRect frame = window_ax_frame(window);
+
+    if (position == MAIN_ONLY_POSITION_FULLSCREEN) {
+        window_manager_set_window_frame(window, bounds.origin.x, bounds.origin.y,
+                                        bounds.size.width, bounds.size.height);
+        return;
+    }
+
+    float x = frame.origin.x;
+    float y = frame.origin.y;
+    float left = bounds.origin.x;
+    float center_x = bounds.origin.x + (bounds.size.width - frame.size.width) * 0.5f;
+    float right = CGRectGetMaxX(bounds) - frame.size.width;
+    float top = bounds.origin.y;
+    float center_y = bounds.origin.y + (bounds.size.height - frame.size.height) * 0.5f;
+    float bottom = CGRectGetMaxY(bounds) - frame.size.height;
+
+    switch (position) {
+    case MAIN_ONLY_POSITION_CENTER:        x = center_x; y = center_y; break;
+    case MAIN_ONLY_POSITION_TOP_LEFT:      x = left;     y = top;      break;
+    case MAIN_ONLY_POSITION_TOP_CENTER:    x = center_x; y = top;      break;
+    case MAIN_ONLY_POSITION_TOP_RIGHT:     x = right;    y = top;      break;
+    case MAIN_ONLY_POSITION_CENTER_LEFT:   x = left;     y = center_y; break;
+    case MAIN_ONLY_POSITION_CENTER_RIGHT:  x = right;    y = center_y; break;
+    case MAIN_ONLY_POSITION_BOTTOM_LEFT:   x = left;     y = bottom;   break;
+    case MAIN_ONLY_POSITION_BOTTOM_CENTER: x = center_x; y = bottom;   break;
+    case MAIN_ONLY_POSITION_BOTTOM_RIGHT:  x = right;    y = bottom;   break;
+    default: return;
+    }
+
+    window_manager_move_window(window, x, y);
 }
 
 bool window_manager_should_manage_window(struct window *window)

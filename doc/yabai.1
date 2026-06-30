@@ -952,6 +952,20 @@ Window should be managed (tile vs float).
 Most windows will be managed automatically, so this should mainly be used to make a window float.
 .RE
 .sp
+\fBmain_only=\fI<BOOL_SEL>\fP\fP
+.RS 4
+Keep one tiled main window per application on each space and make additional matching windows float.
+.RE
+.sp
+\fBmain_only_position=\fI<POSITION>\fP\fP
+.RS 4
+Position additional floating windows created by \fBmain_only=on\fP.
+.br
+Valid values are \fInoneP, \fIcenterP, \fItop_leftP, \fItop_centerP, \fItop_rightP, \fIcenter_leftP, \fIcenter_rightP, \fIbottom_leftP, \fIbottom_centerP, \fIbottom_rightP, and \fIfullscreenP.
+.br
+The default value \fInoneP preserves the position chosen by macOS. \fIfullscreenP fills the usable display area without entering native fullscreen.
+.RE
+.sp
 \fBsticky=\fI<BOOL_SEL>\fP\fP
 .RS 4
 Window appears on all spaces.
@@ -1025,6 +1039,8 @@ System Integrity Protection must be partially disabled.
     "follow_space": bool,
     "opacity": number,
     "manage": bool (optional),
+    "main-only": bool (optional),
+    "main-only-position": string,
     "sticky": bool (optional),
     "mouse_follows_focus": bool (optional),
     "sub\-layer": string,
