@@ -1668,6 +1668,52 @@ out:
     return window;
 }
 
+struct window *window_manager_recover_window(struct space_manager *sm, struct window_manager *wm, uint32_t window_id)
+{
+    CGRect frame = CGRectNull;
+    SLSGetWindowBounds(g_connection, window_id, &frame);
+    if (CGRectIsNull(frame) || CGRectIsEmpty(frame)) return NULL;
+
+    CGPoint point = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+    AXUIElementRef element_ref = NULL;
+    AXUIElementCopyElementAtPosition(wm->system_element, point.x, point.y, &element_ref);
+    if (!element_ref) return NULL;
+
+    CFTypeRef role = NULL;
+    AXUIElementCopyAttributeValue(element_ref, kAXRoleAttribute, &role);
+
+    AXUIElementRef window_ref = NULL;
+    if (role && CFEqual(role, kAXWindowRole)) {
+        window_ref = element_ref;
+    } else {
+        AXUIElementCopyAttributeValue(element_ref, kAXWindowAttribute, (CFTypeRef *)&window_ref);
+        CFRelease(element_ref);
+    }
+    if (role) CFRelease(role);
+    if (!window_ref) return NULL;
+
+    uint32_t recovered_id = ax_window_id(window_ref);
+    pid_t pid = ax_window_pid(window_ref);
+    struct application *application = window_manager_find_application(wm, pid);
+    if (recovered_id != window_id || !application) {
+        CFRelease(window_ref);
+        return NULL;
+    }
+
+    debug("%s: recovered %s %u from focused screen position\n", __FUNCTION__, application->name, window_id);
+    struct window *window = window_manager_create_and_add_window(sm, wm, application, window_ref, window_id, false);
+    if (!window) return NULL;
+
+    uint64_t sid = window_space(window_id);
+    if (window_manager_should_manage_window(window) && !window_manager_find_managed_window(wm, window)) {
+        struct view *view = space_manager_tile_window_on_space(sm, window, sid);
+        window_manager_add_managed_window(wm, window, view);
+        if (space_is_visible(sid)) window_node_flush(view->root);
+    }
+
+    return window;
+}
+
 struct window **window_manager_add_application_windows(struct space_manager *sm, struct window_manager *wm, struct application *application, int *count)
 {
     *count = 0;

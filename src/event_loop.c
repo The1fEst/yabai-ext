@@ -703,8 +703,11 @@ static EVENT_HANDLER(WINDOW_FOCUSED)
 
     struct window *window = window_manager_find_window(&g_window_manager, window_id);
     if (!window) {
-        window_manager_add_lost_focused_event(&g_window_manager, window_id);
-        return;
+        window = window_manager_recover_window(&g_space_manager, &g_window_manager, window_id);
+        if (!window) {
+            window_manager_add_lost_focused_event(&g_window_manager, window_id);
+            return;
+        }
     }
 
     if (!__sync_bool_compare_and_swap(&window->id_ptr, &window->id, &window->id)) {
