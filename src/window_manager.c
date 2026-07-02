@@ -112,9 +112,14 @@ void window_manager_apply_manage_rule_effects_to_window(struct space_manager *sm
 {
     if (effects->main_only == RULE_PROP_ON) {
         uint64_t target_sid = window_space(window->id);
+        EventTime origin_dt = GetCurrentEventTime() - g_process_manager.pending_window_origin_time;
         if (g_process_manager.pending_window_origin_pid == window->application->pid &&
-            g_process_manager.pending_window_origin_space_id) {
+            g_process_manager.pending_window_origin_space_id &&
+            origin_dt < 2.0f) {
             target_sid = g_process_manager.pending_window_origin_space_id;
+        }
+        if (!target_sid) {
+            target_sid = space_manager_active_space();
         }
 
         bool is_main_window = true;
