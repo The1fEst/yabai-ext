@@ -84,18 +84,20 @@ void insert_feedback_show(struct window_node *node)
     }
 
     CGRect rect = (CGRect) {{ 0.5f*INSERT_FEEDBACK_WIDTH, 0.5f*INSERT_FEEDBACK_WIDTH }, { frame.size.width - INSERT_FEEDBACK_WIDTH, frame.size.height - INSERT_FEEDBACK_WIDTH }};
-    CGRect fill = CGRectInset(rect, 0.5f*INSERT_FEEDBACK_WIDTH, 0.5f*INSERT_FEEDBACK_WIDTH);
     CGRect clip = { { rect.origin.x + clip_x, rect.origin.y + clip_y }, { rect.size.width + clip_w, rect.size.height + clip_h } };
-    CGPathRef path = CGPathCreateWithRoundedRect(rect, cgrect_clamp_x_radius(rect, INSERT_FEEDBACK_RADIUS), cgrect_clamp_y_radius(rect, INSERT_FEEDBACK_RADIUS), NULL);
+    CGRect preview = CGRectIntersection(rect, clip);
+    CGRect fill = CGRectInset(preview, 0.5f*INSERT_FEEDBACK_WIDTH, 0.5f*INSERT_FEEDBACK_WIDTH);
+    CGPathRef path = CGPathCreateWithRoundedRect(preview,
+                                                cgrect_clamp_x_radius(preview, INSERT_FEEDBACK_RADIUS),
+                                                cgrect_clamp_y_radius(preview, INSERT_FEEDBACK_RADIUS),
+                                                NULL);
 
     SLSDisableUpdate(g_connection);
     SLSSetWindowShape(g_connection, node->feedback_window.id, 0.0f, 0.0f, frame_region);
     CGContextClearRect(node->feedback_window.context, frame);
-    CGContextClipToRect(node->feedback_window.context, clip);
     CGContextFillRect(node->feedback_window.context, fill);
     CGContextAddPath(node->feedback_window.context, path);
     CGContextStrokePath(node->feedback_window.context);
-    CGContextResetClip(node->feedback_window.context);
     CGContextFlush(node->feedback_window.context);
     SLSReenableUpdate(g_connection);
     CGPathRelease(path);
