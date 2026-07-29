@@ -41,6 +41,7 @@ This fork adds a few multi-display and window-placement improvements on top of y
 - Rules support `main_only=on`, allowing one tiled main window per application on each space while keeping additional windows, dialogs, and progress windows floating. `main_only_float_position` positions those additional windows, while `manage_off_position` provides the same placement options for `manage=off` rules.
 - `cycle_focus=on` and `cycle_move=on` extend directional focus and movement across displays, wrapping at the outer edge.
 - `space_focus_per_display=on` makes space focus selectors local to the active display, while `window_space_per_display=on` does the same for moving windows between spaces.
+- Rules support `hide=on`, removing matching windows from the screen entirely — invisible and unable to receive mouse events — for windows that cannot be closed. Combine with `scratchpad` to bring them back on demand.
 
 All new configuration options default to `off` and preserve upstream behavior unless explicitly enabled.
 

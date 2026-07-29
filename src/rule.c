@@ -64,6 +64,7 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             "\t\"mouse_follows_focus\":%s,\n"
             "\t\"sub-layer\":\"%s\",\n"
             "\t\"native-fullscreen\":%s,\n"
+            "\t\"hide\":%s,\n"
             "\t\"grid\":\"%d:%d:%d:%d:%d:%d\",\n"
             "\t\"scratchpad\":\"%s\",\n"
             "\t\"one-shot\":%s,\n"
@@ -87,6 +88,7 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index)
             json_optional_bool(rule->effects.mff),
             rule_effects_check_flag(&rule->effects, RULE_LAYER) ? layer_str[rule->effects.layer] : "",
             json_optional_bool(rule->effects.fullscreen),
+            json_optional_bool(rule->effects.hide),
             rule->effects.grid[0], rule->effects.grid[1],
             rule->effects.grid[2], rule->effects.grid[3],
             rule->effects.grid[4], rule->effects.grid[5],
@@ -137,6 +139,7 @@ void rule_combine_effects(struct rule_effects *effects, struct rule_effects *res
     if (effects->sticky     != RULE_PROP_UD) result->sticky     = effects->sticky;
     if (effects->mff        != RULE_PROP_UD) result->mff        = effects->mff;
     if (effects->fullscreen != RULE_PROP_UD) result->fullscreen = effects->fullscreen;
+    if (effects->hide       != RULE_PROP_UD) result->hide       = effects->hide;
 
     if (effects->grid[0] != 0 && effects->grid[1] != 0) {
         result->grid[0] = effects->grid[0];

@@ -1013,6 +1013,16 @@ static EVENT_HANDLER(SLS_WINDOW_ORDERED)
     debug("%s: %d\n", __FUNCTION__, wid);
     struct window_node *node = table_find(&g_window_manager.insert_feedback, &wid);
     if (node) SLSOrderWindow(g_connection, node->feedback_window.id, 1, node->window_order[0]);
+
+    //
+    // NOTE: An application orders its own window back in when it is activated,
+    // which undoes a hide=on rule. Put it back where it belongs. Ordering the
+    // window out here cannot loop, because the window is no longer ordered in
+    // when this event fires for it again.
+    //
+
+    struct window *window = window_manager_find_window(&g_window_manager, wid);
+    if (window) window_manager_reapply_hidden_window(window);
 }
 
 static EVENT_HANDLER(SLS_WINDOW_DESTROYED)
@@ -1080,6 +1090,7 @@ static EVENT_HANDLER(SPACE_CHANGED)
 
     if (!mission_control_is_active() && space_is_user(g_space_manager.current_space_id)) {
         window_manager_validate_and_check_for_windows_on_space(&g_space_manager, &g_window_manager, g_space_manager.current_space_id);
+        window_manager_reapply_hidden_windows(&g_window_manager);
 
         if (view_is_invalid(view)) {
             view_update(view);

@@ -218,6 +218,7 @@ extern bool g_verbose;
 #define ARGUMENT_RULE_KEY_GRID       "grid"
 #define ARGUMENT_RULE_KEY_LABEL      "label"
 #define ARGUMENT_RULE_KEY_SCRATCHPAD "scratchpad"
+#define ARGUMENT_RULE_KEY_HIDE       "hide"
 
 #define ARGUMENT_RULE_VALUE_SPACE '^'
 #define ARGUMENT_RULE_VALUE_GRID  "%d:%d:%d:%d:%d:%d"
@@ -2931,6 +2932,17 @@ static bool parse_rule(FILE *rsp, char **message, struct rule *rule, struct toke
                 rule->effects.fullscreen = RULE_PROP_ON;
             } else if (string_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
                 rule->effects.fullscreen = RULE_PROP_OFF;
+            } else {
+                daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
+                did_parse = false;
+            }
+        } else if (string_equals(key, ARGUMENT_RULE_KEY_HIDE)) {
+            if (exclusion) unsupported_exclusion = key;
+
+            if (string_equals(value, ARGUMENT_COMMON_VAL_ON)) {
+                rule->effects.hide = RULE_PROP_ON;
+            } else if (string_equals(value, ARGUMENT_COMMON_VAL_OFF)) {
+                rule->effects.hide = RULE_PROP_OFF;
             } else {
                 daemon_fail(rsp, "invalid value '%s' for key '%s'\n", value, key);
                 did_parse = false;

@@ -55,6 +55,7 @@ struct rule_effects
     int mff;
     int layer;
     int fullscreen;
+    int hide;
     unsigned grid[6];
     char *scratchpad;
     uint16_t flags;

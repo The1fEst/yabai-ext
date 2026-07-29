@@ -211,6 +211,14 @@ void window_manager_apply_rule_effects_to_window(struct space_manager *sm, struc
     }
 
     window_manager_position_rule_window(sm, window, window->rule_position);
+
+    if (effects->hide == RULE_PROP_ON) {
+        window_manager_make_window_floating(sm, wm, window, true, false);
+        window_manager_hide_window(wm, window);
+    } else if (effects->hide == RULE_PROP_OFF) {
+        window_clear_flag(window, WINDOW_HIDDEN);
+        scripting_addition_order_window(window->id, 1, 0);
+    }
 }
 
 void window_manager_apply_manage_rules_to_window(struct space_manager *sm, struct window_manager *wm, struct window *window, char *window_title, char *window_role, char *window_subrole, bool one_shot_rules)
@@ -2681,13 +2689,16 @@ mode_1:;
         } else {
             _SLPSSetFrontProcessWithOptions(&g_process_manager.finder_psn, 0, kCPSNoWindows);
         }
+        window_set_flag(window, WINDOW_HIDDEN);
         scripting_addition_order_window(window->id, 0, 0);
     } else if (visible_space && !ordered_in) {
 mode_2:;
+        window_clear_flag(window, WINDOW_HIDDEN);
         scripting_addition_order_window(window->id, 1, 0);
         window_manager_focus_window_with_raise(&window->application->psn, window->id, window->ref);
     } else {
 mode_3:;
+        window_clear_flag(window, WINDOW_HIDDEN);
         space_manager_move_window_to_space(sid, window);
         scripting_addition_order_window(window->id, 1, 0);
         window_manager_focus_window_with_raise(&window->application->psn, window->id, window->ref);
@@ -2733,8 +2744,76 @@ bool window_manager_remove_scratchpad_for_window(struct window_manager *wm, stru
     return false;
 }
 
+bool window_manager_hide_window(struct window_manager *wm, struct window *window)
+{
+    TIME_FUNCTION;
+
+    //
+    // NOTE: Ordering a window out is not a durable state. The owning
+    // application orders its window back in when it is activated, which happens
+    // every time its space becomes visible again, and nothing would restore the
+    // hidden state afterwards. Remember the intent on the window so that
+    // window_manager_reapply_hidden_windows can enforce it later.
+    //
+
+    window_set_flag(window, WINDOW_HIDDEN);
+
+    uint8_t ordered_in = 0;
+    SLSWindowIsOrderedIn(g_connection, window->id, &ordered_in);
+    if (!ordered_in) return true;
+
+    uint64_t sid = space_manager_active_space();
+    if (sid && (window_space(window->id) == sid || window_is_sticky(window->id))) {
+        struct window *next = window_manager_find_window_on_space_by_rank_filtering_window(wm, sid, 1, window->id);
+        if (next) {
+            window_manager_focus_window_with_raise(&next->application->psn, next->id, next->ref);
+        } else {
+            _SLPSSetFrontProcessWithOptions(&g_process_manager.finder_psn, 0, kCPSNoWindows);
+        }
+    }
+
+    return scripting_addition_order_window(window->id, 0, 0);
+}
+
+void window_manager_reapply_hidden_window(struct window *window)
+{
+    if (!window_check_flag(window, WINDOW_HIDDEN)) return;
+
+    uint8_t ordered_in = 0;
+    SLSWindowIsOrderedIn(g_connection, window->id, &ordered_in);
+    if (!ordered_in) return;
+
+    scripting_addition_order_window(window->id, 0, 0);
+}
+
+void window_manager_reapply_hidden_windows(struct window_manager *wm)
+{
+    TIME_FUNCTION;
+
+    //
+    // NOTE: Sweep for hidden windows that came back without an ordering event
+    // we could react to. The per-window path driven by SLS_WINDOW_ORDERED
+    // handles the common case; this covers a space restoring its windows
+    // wholesale, where no such event is delivered for them.
+    //
+
+    table_for (struct window *window, wm->window, {
+        window_manager_reapply_hidden_window(window);
+    })
+}
+
 void window_manager_scratchpad_recover_windows(void)
 {
+    //
+    // NOTE: This is the escape hatch that forcefully brings every hidden window
+    // back, so drop the hidden state as well. Ordering the windows back in
+    // without clearing it would only hold until the next space change.
+    //
+
+    table_for (struct window *window, g_window_manager.window, {
+        window_clear_flag(window, WINDOW_HIDDEN);
+    })
+
     int window_count;
     uint32_t *window_list = window_manager_existing_application_window_list(NULL, &window_count);
     if (!window_list) return;

@@ -707,6 +707,12 @@ ARGUMENT
     If this rule matches multiple windows, only the first window that matched will be assigned this scratchpad identifier. +
     System Integrity Protection must be partially disabled.
 
+*hide='<BOOL_SEL>'*::
+    Remove the window from the screen entirely; it becomes invisible and no longer receives mouse events. +
+    The window will automatically be treated as a (manage=off) floating window and focus is passed to the next window on the space. +
+    Combine with *scratchpad* to bring the window back on demand ('yabai -m window --toggle <LABEL>'), or use 'yabai -m window --scratchpad recover' to forcefully bring back all hidden windows. +
+    System Integrity Protection must be partially disabled.
+
 DATAFORMAT
 ^^^^^^^^^^
 
@@ -731,6 +737,7 @@ DATAFORMAT
     "mouse_follows_focus": bool (optional),
     "sub-layer": string,
     "native-fullscreen": bool (optional),
+    "hide": bool (optional),
     "grid": string,
     "scratchpad": string,
     "one-shot": bool,
