@@ -1,6 +1,16 @@
 bool workspace_event_handler_begin(void **context)
 {
     NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
+
+    //
+    // NOTE(fest): An unknown newer major version behaves like the latest version
+    // we know about, so that version-gated code-paths stay enabled instead of
+    // silently falling back to pre-Sequoia behaviour.
+    //
+    if (version.majorVersion > LATEST_SUPPORTED_MACOS_VERSION) {
+        version.majorVersion = LATEST_SUPPORTED_MACOS_VERSION;
+    }
+
 #define SUPPORT_MACOS_VERSION(name, major_version) _workspace_is_macos_version_##name = version.majorVersion == major_version;
     SUPPORTED_MACOS_VERSION_LIST
 #undef SUPPORT_MACOS_VERSION

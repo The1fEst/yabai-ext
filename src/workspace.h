@@ -1,6 +1,12 @@
 #ifndef WORKSPACE_H
 #define WORKSPACE_H
 
+//
+// NOTE(fest): Keep in sync with LATEST_KNOWN_MACOS_VERSION in src/osax/payload.m,
+// which is built as a separate binary and cannot include this header.
+//
+#define LATEST_SUPPORTED_MACOS_VERSION 26
+
 #define SUPPORTED_MACOS_VERSION_LIST    \
     SUPPORT_MACOS_VERSION(tahoe,    26) \
     SUPPORT_MACOS_VERSION(sequoia,  15) \

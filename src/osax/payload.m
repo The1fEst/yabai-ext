@@ -217,6 +217,28 @@ uint64_t decode_adrp_add(uint64_t addr, uint64_t offset)
 }
 #endif
 
+//
+// NOTE(fest): The offset- and pattern-tables below are keyed by major version.
+// A newer major version that we have no table for would previously disable all
+// space functionality without any visible error, because the payload still
+// loads and answers on the socket. Clamp unknown newer versions to the latest
+// version we do have data for; if the Dock binary changed, the pattern-scan
+// fails loudly instead.
+//
+#define LATEST_KNOWN_MACOS_VERSION 26
+
+static NSOperatingSystemVersion clamp_os_version(NSOperatingSystemVersion os_version)
+{
+    if (os_version.majorVersion > LATEST_KNOWN_MACOS_VERSION) {
+        NSLog(@"[yabai-sa] macOS %ld is unknown; treating it as macOS %d!", os_version.majorVersion, LATEST_KNOWN_MACOS_VERSION);
+        os_version.majorVersion = LATEST_KNOWN_MACOS_VERSION;
+        os_version.minorVersion = 0;
+        os_version.patchVersion = 0;
+    }
+
+    return os_version;
+}
+
 static bool verify_os_version(NSOperatingSystemVersion os_version)
 {
     NSLog(@"[yabai-sa] checking for macOS %ld.%ld.%ld compatibility!", os_version.majorVersion, os_version.minorVersion, os_version.patchVersion);
@@ -266,7 +288,7 @@ static bool verify_os_version(NSOperatingSystemVersion os_version)
 
 static void init_instances()
 {
-    NSOperatingSystemVersion os_version = [[NSProcessInfo processInfo] operatingSystemVersion];
+    NSOperatingSystemVersion os_version = clamp_os_version([[NSProcessInfo processInfo] operatingSystemVersion]);
     if (!verify_os_version(os_version)) return;
 
     uint64_t baseaddr = static_base_address() + image_slide();
